@@ -1,3 +1,4 @@
 plotly==5.3.1
 PyMuPDF==1.18.17
 streamlit==0.88.0
+textrazor==1.4.0
