@@ -3,8 +3,12 @@ import requests
 import fitz
 import tempfile
 import plotly.graph_objects as go
+import pandas as pd
 import re
 from itertools import count
+import textrazor
+
+from mappings import docs, docs_colors
 
 
 @st.cache(allow_output_mutation=True)
@@ -63,13 +67,14 @@ def search_against_docs(asset_dict, search_phrase):
 
 
 @st.cache
-def create_match_histogram(asset_search_matches):
+def create_match_histogram(asset_search_matches, docs_colors):
     """
     Checks a dictionary of matches and returns a histogram.
 
     Parameters
     ----------
     asset_search_matches : dict
+    docs_colors : dict
 
     Returns
     -------
@@ -80,14 +85,123 @@ def create_match_histogram(asset_search_matches):
         match_dict[asset_name] = len(search_matches)
     fig = go.Figure(
         data=go.Bar(
-            x=list(match_dict.keys()),
-            y=list(match_dict.values()),
+            y=list(match_dict.keys()),
+            x=list(match_dict.values()),
             text=list(match_dict.values()),
+            opacity=0.9,
+            marker_color=list(docs_colors.values()),
+            marker_line={
+                "color": "white",
+                "width": 1,
+            },
             textposition="outside",
+            orientation="h",
+            meta=search_phrase,
+            hovertemplate="<extra></extra>%{y} erwähnt %{meta} %{x} mal in ihrem Wahlprogramm.",
         )
     )
-    match_histogram = fig
-    return match_histogram
+    fig.update_layout(
+        yaxis={"categoryorder": "total ascending"},
+        xaxis={
+            "zeroline": True,
+            "zerolinewidth": 1,
+            "zerolinecolor": "black",
+            "gridcolor": "black",
+        },
+        title={
+            "text": f"Anzahl Erwähnungen von <b>{search_phrase}</b> nach Partei",
+            "y": 0.9,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+            "font": {"size": 24},
+        },
+        paper_bgcolor="rgba(162,162,162,0.1)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin_pad=10,
+    )
+    return fig
+
+
+def request_textrazor_data(match_nr, text_to_analyze):
+    textrazor.api_key = st.secrets["textrazor_key"]
+    tr_client = textrazor.TextRazor(extractors=["entities", "topics", "categories"])
+
+    response = None
+    topic_df = pd.DataFrame(columns=["topic_result_id", "label", "score", "wikilink"])
+    try:
+        response = tr_client.analyze(text_to_analyze)
+    except textrazor.TextRazorAnalysisException:
+        pass
+    if response:
+        if response.topics():
+            for topic, topic_n in zip(response.topics(), count()):
+                topic_data = topic.json
+                topic_df = topic_df.append(
+                    {
+                        "match_nr": match_nr,
+                        "topic_result_id": topic_n,
+                        "label": topic_data["label"],
+                        "score": topic_data["score"],
+                    },
+                    ignore_index=True,
+                )
+    return topic_df
+
+
+def create_topic_histogram(topic_df):
+    """
+    Builds a chart for the frequency of topics based on a DataFrame.
+
+    Parameters
+    ----------
+    topic_df : DataFrame
+
+    Returns
+    -------
+    Plotly figure
+    """
+    fig = go.Figure(
+        data=go.Bar(
+            y=topic_df["label"],
+            x=topic_df["match_nr"],
+            text=topic_df["match_nr"],
+            textposition="outside",
+            orientation="h",
+            meta=search_phrase,
+            hovertemplate="<extra></extra>%{meta} wird %{x} mal im Kontext von %{y} erwähnt.",
+            opacity=0.9,
+            marker={
+                "color": topic_df["match_nr"],
+                "colorscale": "blues",
+            },
+            marker_line={
+                "color": "white",
+                "width": 1,
+            },
+        )
+    )
+    fig.update_layout(
+        yaxis={"categoryorder": "total ascending"},
+        xaxis={
+            "zeroline": True,
+            "zerolinewidth": 1,
+            "zerolinecolor": "black",
+            "gridcolor": "black",
+        },
+        title={
+            "text": f"Top 10 Themen, in deren Kontext <b>{search_phrase}</b><br>von <b>{st.session_state['selected_party']}</b> erwähnt wird",
+            "y": 0.9,
+            "x": 0.5,
+            "xanchor": "center",
+            "yanchor": "top",
+            "font": {"size": 24},
+        },
+        paper_bgcolor="rgba(162,162,162,0.1)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin_pad=10,
+    )
+    return fig
 
 
 # ###############################
@@ -109,20 +223,6 @@ search_phrase = st.text_input(
     label="Gib hier das Suchwort ein, das dich interessiert.", value="klima"
 )
 
-docs = {
-    "Bündnis 90 / Grüne": "https://cms.gruene.de/uploads/documents/Wahlprogramm-DIE-GRUENEN-Bundestagswahl-2021_barrierefrei.pdf",
-    "SPD": "https://www.spd.de/fileadmin/Dokumente/Beschluesse/Programm/SPD-Zukunftsprogramm.pdf",
-    "CDU / CSU": "https://www.csu.de/common/download/Regierungsprogramm.pdf",
-    "FDP": "https://www.fdp.de/sites/default/files/2021-06/FDP_Programm_Bundestagswahl2021_1.pdf",
-    "Die Linke": "https://www.die-linke.de/fileadmin/download/wahlen2021/Wahlprogramm/DIE_LINKE_Wahlprogramm_zur_Bundestagswahl_2021.pdf",
-    "Volt": "https://assets.volteuropa.org/2021-06/Wahlprogramm%20Langversion.pdf",
-    "Freie Wähler": "https://www.freiewaehler.eu/template/elemente/203/FREIE%20WÄHLER_Wahlprogramm-BTW21.pdf",
-    "Die PARTEI": "https://spitzenkandidatinnen.sh/file.php/btw21/wahlprogramm-btw21_online.pdf",
-    "Piratenpartei": "https://wiki.piratenpartei.de/wiki/images/9/9e/Wahlprogramm_zur_Bundestagswahl_2021_der_Piratenpartei_Deutschland.pdf",
-    "ÖDP": "https://www.oedp.de/fileadmin/user_upload/bundesverband/programm/programme/OEDPWahlprogrammBundestagswahl2021.pdf",
-    "V-Partei": "https://v-partei.de/wp-content/uploads/V-Partei³-Wahlprogramm-BTW-2021.pdf",
-}
-
 with st.spinner(
     "Einen Moment, wir durchsuchen die Wahlprogramme nach deiner Suchanfrage."
 ):
@@ -135,7 +235,9 @@ with st.spinner(
     asset_search_matches = search_against_docs(
         asset_dict=assets, search_phrase=search_phrase
     )
-    match_histogram = create_match_histogram(asset_search_matches=asset_search_matches)
+    match_histogram = create_match_histogram(
+        asset_search_matches=asset_search_matches, docs_colors=docs_colors
+    )
 
     st.plotly_chart(match_histogram, use_container_width=True)
 
@@ -157,7 +259,12 @@ with st.spinner(
                 i += 1
             col = locals()[f"col{i}"]
             if col.button(asset_name):
-                with st.expander("Treffer anzeigen", expanded=True):
+                st.session_state["selected_party"] = asset_name
+                topic_placeholder = st.empty()
+                topics_across_matches = pd.DataFrame(
+                    columns=["topic_result_id", "label", "score", "wikilink"]
+                )
+                with st.expander("Treffer anzeigen", expanded=False):
                     for match, match_nr in zip(matches, count()):
                         f"#### Treffer {match_nr + 1}:\n"
                         match_text = ">"
@@ -171,3 +278,15 @@ with st.spinner(
                             )
                             match_text += f"{line_text}  \n"
                         f"{match_text}"
+                        if match_nr <= 9:
+                            topics = request_textrazor_data(match_nr, match_text)
+                            topics_across_matches = topics_across_matches.append(
+                                topics, ignore_index=True
+                            )
+                            st.dataframe(data=topics)
+                agg_topics = topics_across_matches.groupby(
+                    ["label"], as_index=False
+                ).agg({"match_nr": pd.Series.nunique, "score": "sum"})
+                agg_topics = agg_topics.nlargest(10, "score")
+                topic_fig = create_topic_histogram(topic_df=agg_topics)
+                topic_placeholder.plotly_chart(topic_fig, use_container_width=True)
