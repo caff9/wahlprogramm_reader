@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+from decouple import config
 
 from mappings import docs, docs_colors, chart_specifications, topics_df, entities_df
 from utils.doc_handler import (
@@ -9,6 +10,9 @@ from utils.doc_handler import (
     request_textrazor_data,
 )
 from utils.chart_builder import create_horizontal_barchart
+
+
+textrazor_key = config("TEXTRAZOR")
 
 # #############################################
 # DEFINTION OF FUNCTIONS USING CACHE
@@ -137,7 +141,7 @@ with st.spinner(
                         # ############################################
                         if match_nr <= 3:
                             topics, entities = request_textrazor_data(
-                                match_nr, match_text, st.secrets["textrazor_key"]
+                                match_nr, match_text, textrazor_key
                             )
                             topics_across_matches = topics_across_matches.append(
                                 topics, ignore_index=True
