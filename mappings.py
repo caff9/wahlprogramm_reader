@@ -1,3 +1,5 @@
+import pandas as pd
+
 docs = {
     "Bündnis 90 / Grüne": "https://cms.gruene.de/uploads/documents/Wahlprogramm-DIE-GRUENEN-Bundestagswahl-2021_barrierefrei.pdf",
     "SPD": "https://www.spd.de/fileadmin/Dokumente/Beschluesse/Programm/SPD-Zukunftsprogramm.pdf",
@@ -25,3 +27,55 @@ docs_colors = {
     "ÖDP": "#DF772D",
     "V-Partei": "#52672F",
 }
+
+chart_specifications = {
+    "search_topic_matches": {
+        "label": "doc",
+        "value": "matches",
+        "marker_color_list": list(docs_colors.values()),
+        "meta_template": "{search_phrase}",
+        "hovertemplate": "<extra></extra>%{y} erwähnt %{meta} %{x} mal in ihrem Wahlprogramm.",
+        "chart_title": "Anzahl Erwähnungen von <b>{search_phrase}</b> nach Partei",
+    },
+    "topics": {
+        "label": "label",
+        "value": "match_nr",
+        "color_col": "match_nr",
+        "colorscale": "blues",
+        "meta_template": "{search_phrase}",
+        "hovertemplate": "<extra></extra>%{meta} wird %{x} mal im Kontext von %{y} erwähnt.",
+        "chart_title": "Top 10 Themen, in deren Kontext <b>{search_phrase}</b><br>von <b>{selected_party}</b> erwähnt wird",
+    },
+    "entities": {
+        "label": "label",
+        "value": "match_nr",
+        "color_col": "match_nr",
+        "colorscale": "blues",
+        "meta_template": "{search_phrase}",
+        "hovertemplate": "<extra></extra>%{meta} wird %{x} mal im Kontext von %{y} erwähnt.",
+        "chart_title": "Top 10 Konzepte, in deren Kontext <b>{search_phrase}</b><br>von <b>{selected_party}</b> erwähnt wird",
+    },
+}
+
+topics_df = pd.DataFrame(
+    columns=[
+        "match_nr",
+        "topic_result_id",
+        "label",
+        "score",
+        "wikiLink",
+    ]
+)
+
+entities_df = pd.DataFrame(
+    columns=[
+        "match_nr",
+        "entity_result_id",
+        "label",
+        "type",
+        "freebase_types",
+        "score",
+        "relevanceScore",
+        "wikiLink",
+    ]
+)

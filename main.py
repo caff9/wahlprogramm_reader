@@ -1,206 +1,33 @@
 import streamlit as st
-import requests
-import fitz
-import tempfile
-import plotly.graph_objects as go
 import pandas as pd
 import re
-from itertools import count
-import textrazor
 
-from mappings import docs, docs_colors
+from mappings import docs, docs_colors, chart_specifications, topics_df, entities_df
+from utils.doc_handler import (
+    read_docs_from_links,
+    search_against_docs,
+    request_textrazor_data,
+)
+from utils.chart_builder import create_horizontal_barchart
 
-
+# #############################################
+# DEFINTION OF FUNCTIONS USING CACHE
+# #############################################
 @st.cache(allow_output_mutation=True)
-def read_docs_from_links(doc_dict):
-    """
-    Reads a dict of structure doc_name: doc_link and imports the respective
-    documents.
-
-    Returns
-    -------
-    dict
-        A dict with doc_name as key. Contains a nested dict of structure
-        line_number: line_text.
-    """
-    return_dict = {}
-    for asset_name, asset_link in doc_dict.items():
-        asset = requests.get(asset_link)
-        with tempfile.TemporaryDirectory() as directory:
-            temp_file_name = asset_name.replace("/", "-")
-            t = open(f"{directory}/{temp_file_name}.pdf", "wb").write(asset.content)
-            doc = fitz.Document(f"{directory}/{temp_file_name}.pdf")
-            doc_text = ""
-            for page in doc:
-                doc_text += page.getText()
-            asset_dict = {}
-            for line_number, line_text in zip(count(), doc_text.splitlines()):
-                asset_dict[line_number] = line_text
-            return_dict[asset_name] = asset_dict
-    return return_dict
+def st_read_docs_from_links(doc_dict):
+    assets = read_docs_from_links(doc_dict)
+    return assets
 
 
 @st.cache
-def search_against_docs(asset_dict, search_phrase):
-    """
-    Checks all loaded docs against search phrase and creates a dict
-    of matches.
-
-    Parameters
-    ----------
-    search_phrase : string
-
-    Returns
-    -------
-    dict
-        A dict with doc_name as key. Contains a nested dict of structure
-        line_number: line_text for lines with a match against search_phrase.
-    """
-    asset_search_matches = {}
-    for asset_name, asset_content_dict in asset_dict.items():
-        match_dict = {}
-        for line_number, line_text in asset_content_dict.items():
-            if search_phrase.lower() in line_text.lower():
-                match_dict[line_number] = [line_text]
-        asset_search_matches[asset_name] = match_dict
+def st_search_against_docs(asset_dict, search_phrase):
+    asset_search_matches = search_against_docs(asset_dict, search_phrase)
     return asset_search_matches
 
 
 @st.cache
-def create_match_histogram(asset_search_matches, docs_colors):
-    """
-    Checks a dictionary of matches and returns a histogram.
-
-    Parameters
-    ----------
-    asset_search_matches : dict
-    docs_colors : dict
-
-    Returns
-    -------
-    Plotly figure
-    """
-    match_dict = {}
-    for asset_name, search_matches in asset_search_matches.items():
-        match_dict[asset_name] = len(search_matches)
-    fig = go.Figure(
-        data=go.Bar(
-            y=list(match_dict.keys()),
-            x=list(match_dict.values()),
-            text=list(match_dict.values()),
-            opacity=0.9,
-            marker_color=list(docs_colors.values()),
-            marker_line={
-                "color": "white",
-                "width": 1,
-            },
-            textposition="outside",
-            orientation="h",
-            meta=search_phrase,
-            hovertemplate="<extra></extra>%{y} erwähnt %{meta} %{x} mal in ihrem Wahlprogramm.",
-        )
-    )
-    fig.update_layout(
-        yaxis={"categoryorder": "total ascending"},
-        xaxis={
-            "zeroline": True,
-            "zerolinewidth": 1,
-            "zerolinecolor": "black",
-            "gridcolor": "black",
-        },
-        title={
-            "text": f"Anzahl Erwähnungen von <b>{search_phrase}</b> nach Partei",
-            "y": 0.9,
-            "x": 0.5,
-            "xanchor": "center",
-            "yanchor": "top",
-            "font": {"size": 24},
-        },
-        paper_bgcolor="rgba(162,162,162,0.1)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        margin_pad=10,
-    )
-    return fig
-
-
-def request_textrazor_data(match_nr, text_to_analyze):
-    textrazor.api_key = st.secrets["textrazor_key"]
-    tr_client = textrazor.TextRazor(extractors=["entities", "topics", "categories"])
-
-    response = None
-    topic_df = pd.DataFrame(columns=["topic_result_id", "label", "score", "wikilink"])
-    try:
-        response = tr_client.analyze(text_to_analyze)
-    except textrazor.TextRazorAnalysisException:
-        pass
-    if response:
-        if response.topics():
-            for topic, topic_n in zip(response.topics(), count()):
-                topic_data = topic.json
-                topic_df = topic_df.append(
-                    {
-                        "match_nr": match_nr,
-                        "topic_result_id": topic_n,
-                        "label": topic_data["label"],
-                        "score": topic_data["score"],
-                    },
-                    ignore_index=True,
-                )
-    return topic_df
-
-
-def create_topic_histogram(topic_df):
-    """
-    Builds a chart for the frequency of topics based on a DataFrame.
-
-    Parameters
-    ----------
-    topic_df : DataFrame
-
-    Returns
-    -------
-    Plotly figure
-    """
-    fig = go.Figure(
-        data=go.Bar(
-            y=topic_df["label"],
-            x=topic_df["match_nr"],
-            text=topic_df["match_nr"],
-            textposition="outside",
-            orientation="h",
-            meta=search_phrase,
-            hovertemplate="<extra></extra>%{meta} wird %{x} mal im Kontext von %{y} erwähnt.",
-            opacity=0.9,
-            marker={
-                "color": topic_df["match_nr"],
-                "colorscale": "blues",
-            },
-            marker_line={
-                "color": "white",
-                "width": 1,
-            },
-        )
-    )
-    fig.update_layout(
-        yaxis={"categoryorder": "total ascending"},
-        xaxis={
-            "zeroline": True,
-            "zerolinewidth": 1,
-            "zerolinecolor": "black",
-            "gridcolor": "black",
-        },
-        title={
-            "text": f"Top 10 Themen, in deren Kontext <b>{search_phrase}</b><br>von <b>{st.session_state['selected_party']}</b> erwähnt wird",
-            "y": 0.9,
-            "x": 0.5,
-            "xanchor": "center",
-            "yanchor": "top",
-            "font": {"size": 24},
-        },
-        paper_bgcolor="rgba(162,162,162,0.1)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        margin_pad=10,
-    )
+def st_create_horizontal_barchart(chart_data, chart_specs, **kwargs):
+    fig = create_horizontal_barchart(chart_data, chart_specs, **kwargs)
     return fig
 
 
@@ -223,49 +50,75 @@ search_phrase = st.text_input(
     label="Gib hier das Suchwort ein, das dich interessiert.", value="klima"
 )
 
+# ###############################
+# LOAD DOCUMENTS
+# ###############################
 with st.spinner(
-    "Einen Moment, wir durchsuchen die Wahlprogramme nach deiner Suchanfrage."
+    "Einen Moment, wir laden erst einmal die Texte der verschiedenen Wahlprogramme."
 ):
-    assets = read_docs_from_links(doc_dict=docs)
+    assets = st_read_docs_from_links(doc_dict=docs)
     f"""
         ---
         ## Ok, lass uns zunächst einmal nachsehen, wie häufig die Wahlprogramme der Parteien ***{search_phrase}*** erwähnen. Mal schauen, was wir so finden :face_with_monocle:
     """
 
-    asset_search_matches = search_against_docs(
+# ################################
+# EXECUTE SEARCH AGAINST DOCUMENTS
+# ################################
+with st.spinner("Einen Moment, wir führen die Suche gegen die Wahlprogramme durch."):
+    asset_search_matches = st_search_against_docs(
         asset_dict=assets, search_phrase=search_phrase
     )
-    match_histogram = create_match_histogram(
-        asset_search_matches=asset_search_matches, docs_colors=docs_colors
+    match_dict = {
+        asset_name: len(search_matches)
+        for asset_name, search_matches in asset_search_matches.items()
+    }
+    search_topic_matches = (
+        pd.DataFrame.from_dict(match_dict, orient="index", columns=["matches"])
+        .rename_axis("doc")
+        .reset_index()
     )
-
-    st.plotly_chart(match_histogram, use_container_width=True)
+    match_fig = st_create_horizontal_barchart(
+        chart_data=search_topic_matches,
+        chart_specs=chart_specifications["search_topic_matches"],
+        title_wildcards={
+            "search_phrase": search_phrase,
+        },
+        meta_variables={"search_phrase": search_phrase},
+    )
+    st.plotly_chart(match_fig, use_container_width=True)
 
     f"""
-        ### Alles klar, die folgenden Parteien erwähnen ***{search_phrase}*** mindestens einmal in ihrem Wahlprogramm.\n
-        Klick auf eine Partei, um die einzelnen Ausschnitte der Wahlprogramme anzuzeigen.
-
+        ### Alles klar, die oben gezeigten Parteien erwähnen ***{search_phrase}*** also mindestens einmal in ihrem Wahlprogramm.\n
+        Klick auf eine Partei, um die einzelnen Ausschnitte der Wahlprogramme anzuzeigen und zu analysieren, im Kontext welcher Themen und Konzepte ***{search_phrase}*** erwähnt wird.
     """
 
+with st.spinner(
+    "Ok, mal schauen, welche Themen und Konzepte wir finden :mag::mag::mag:"
+):
     button_container = st.container()
     col1, col2, col3, col4 = button_container.columns(4)
+    topics_placeholder = st.empty()
+    entities_placeholder = st.empty()
 
+    # ############################################
+    # POPULATE BUTTONS FOR PARTIES WITH >= 1 MATCH
+    # ############################################
     i = 0
     for asset_name, matches in asset_search_matches.items():
         if len(matches) > 0:
-            if i == 4:
-                i = 1
-            else:
-                i += 1
+            i = i + 1 if i < 4 else 1
             col = locals()[f"col{i}"]
             if col.button(asset_name):
+
+                # ############################################
+                # DISPLAY MATCHES
+                # ############################################
                 st.session_state["selected_party"] = asset_name
-                topic_placeholder = st.empty()
-                topics_across_matches = pd.DataFrame(
-                    columns=["topic_result_id", "label", "score", "wikilink"]
-                )
-                with st.expander("Treffer anzeigen", expanded=False):
-                    for match, match_nr in zip(matches, count()):
+                topics_across_matches = topics_df.copy()
+                entities_across_matches = entities_df.copy()
+                with st.expander("Einzelne Treffer anzeigen", expanded=False):
+                    for match_nr, match in enumerate(matches):
                         f"#### Treffer {match_nr + 1}:\n"
                         match_text = ">"
                         for line_number in range(match - 5, match + 6):
@@ -278,15 +131,41 @@ with st.spinner(
                             )
                             match_text += f"{line_text}  \n"
                         f"{match_text}"
-                        if match_nr <= 9:
-                            topics = request_textrazor_data(match_nr, match_text)
+
+                        # ############################################
+                        # EXECUTE TEXTRAZOR ANALYSIS PER MATCH
+                        # ############################################
+                        if match_nr <= 3:
+                            topics, entities = request_textrazor_data(
+                                match_nr, match_text, st.secrets["textrazor_key"]
+                            )
                             topics_across_matches = topics_across_matches.append(
                                 topics, ignore_index=True
                             )
-                            st.dataframe(data=topics)
-                agg_topics = topics_across_matches.groupby(
-                    ["label"], as_index=False
-                ).agg({"match_nr": pd.Series.nunique, "score": "sum"})
-                agg_topics = agg_topics.nlargest(10, "score")
-                topic_fig = create_topic_histogram(topic_df=agg_topics)
-                topic_placeholder.plotly_chart(topic_fig, use_container_width=True)
+                            entities_across_matches = entities_across_matches.append(
+                                entities, ignore_index=True
+                            )
+                            # st.dataframe(data=entities)
+
+                # ############################################
+                # DISPLAY CHARTS FOR TOPICS AND ENTITIES
+                # ############################################
+                for unit in ["topics", "entities"]:
+                    agg_unit = (
+                        locals()[f"{unit}_across_matches"]
+                        .groupby(["label"], as_index=False)
+                        .agg({"match_nr": pd.Series.nunique, "score": "sum"})
+                    )
+                    agg_unit = agg_unit.nlargest(10, "score")
+                    fig = st_create_horizontal_barchart(
+                        chart_data=agg_unit,
+                        chart_specs=chart_specifications[unit],
+                        title_wildcards={
+                            "search_phrase": search_phrase,
+                            "selected_party": st.session_state["selected_party"],
+                        },
+                        meta_variables={"search_phrase": search_phrase},
+                    )
+                    locals()[f"{unit}_placeholder"].plotly_chart(
+                        fig, use_container_width=True, config={"displaylogo": False}
+                    )
