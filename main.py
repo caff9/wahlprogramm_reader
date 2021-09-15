@@ -86,7 +86,7 @@ with st.spinner("Einen Moment, wir führen die Suche gegen die Wahlprogramme dur
         },
         meta_variables={"search_phrase": search_phrase},
     )
-    st.plotly_chart(match_fig, use_container_width=True)
+    st.plotly_chart(match_fig, use_container_width=True, config={"displaylogo": False})
 
     f"""
         ### Alles klar, die oben gezeigten Parteien erwähnen ***{search_phrase}*** also mindestens einmal in ihrem Wahlprogramm.\n
