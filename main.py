@@ -14,6 +14,24 @@ from utils.chart_builder import create_horizontal_barchart
 
 textrazor_key = config("TEXTRAZOR")
 
+# hide menu
+st.markdown(
+    """ <style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+</style> """,
+    unsafe_allow_html=True,
+)
+
+# hide fullscreen icon
+st.markdown(
+    """ <style>
+.css-ucv8le.e19lei0e0 {visibility: hidden;}
+</style> """,
+    unsafe_allow_html=True,
+)
+
+
 # #############################################
 # DEFINTION OF FUNCTIONS USING CACHE
 # #############################################
@@ -90,7 +108,9 @@ with st.spinner("Einen Moment, wir führen die Suche gegen die Wahlprogramme dur
         },
         meta_variables={"search_phrase": search_phrase},
     )
-    st.plotly_chart(match_fig, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(
+        match_fig, use_container_width=True, config={"displayModeBar": False}
+    )
 
     f"""
         ### Alles klar, die oben gezeigten Parteien erwähnen ***{search_phrase}*** also mindestens einmal in ihrem Wahlprogramm.\n
@@ -171,5 +191,5 @@ with st.spinner(
                         meta_variables={"search_phrase": search_phrase},
                     )
                     locals()[f"{unit}_placeholder"].plotly_chart(
-                        fig, use_container_width=True, config={"displaylogo": False}
+                        fig, use_container_width=True, config={"displayModeBar": False}
                     )
