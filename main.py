@@ -4,6 +4,7 @@ import re
 from decouple import config
 from random import sample
 from PIL import Image
+import base64
 
 from mappings import docs, docs_colors, chart_specifications, topics_df, entities_df
 from utils.doc_handler import (
@@ -22,8 +23,6 @@ textrazor_key = config("TEXTRAZOR")
 # hide menu and fullscreen icon
 st.markdown(
     """ <style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
 .css-ucv8le.e19lei0e0 {visibility: hidden; position: relative; left: -50px;}
 </style> """,
     unsafe_allow_html=True,
@@ -105,6 +104,15 @@ entities_placeholder = st.empty()
 entities_selection_placeholder = st.container()
 entities_col0, entities_col1 = entities_selection_placeholder.columns(2)
 entity_match_placeholder = st.empty()
+
+st.markdown(
+    f"""
+        ---
+        Check out the repository for this app: <a href="https://github.com/caff9/wahlprogramm_reader" target="_blank"><img src="data:image/gif;base64,{base64.b64encode(open("GitHub-Mark-32px.png", "rb").read()).decode("utf-8")}" height="32" alt="GitHub"></a> \n
+        Write me on LinkedIn: <a href="https://www.linkedin.com/in/erik-klemusch/" target="_blank"><img src="data:image/gif;base64,{base64.b64encode(open("LI-In-Bug.png", "rb").read()).decode("utf-8")}" height="32" alt="LinkedIn"></a>
+    """,
+    unsafe_allow_html=True,
+)
 
 # #############################################
 # DEFINTION OF FUNCTIONS USING CACHE
