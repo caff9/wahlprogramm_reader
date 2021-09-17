@@ -15,11 +15,11 @@ docs = {
 }
 
 docs_colors = {
-    "Bündnis 90 / Grüne": "#A8C671",
-    "SPD": "#D12C24",
-    "CDU / CSU": "#1A1919",
-    "FDP": "#D32F7C",
-    "Die Linke": "#A32A4D",
+    "Bündnis 90 / Grüne": "#3E8825",  # "#A8C671",
+    "SPD": "#E03021",  # "#D12C24",
+    "CDU / CSU": "#020202",  # "#1A1919",
+    "FDP": "#F6D84E",  # "#D32F7C",
+    "Die Linke": "#B83964",  # "#A32A4D",
     "Volt": "#3F2C69",
     "Freie Wähler": "#1C508E",
     "Die PARTEI": "#97353A",
@@ -35,25 +35,25 @@ chart_specifications = {
         "marker_color_list": list(docs_colors.values()),
         "meta_template": "{search_phrase}",
         "hovertemplate": "<extra></extra>%{y} erwähnt %{meta} %{x} mal in ihrem Wahlprogramm.",
-        "chart_title": "Anzahl Erwähnungen von <b>{search_phrase}</b> nach Partei",
+        "chart_title": "Anzahl Erwähnungen von <br><b>{search_phrase}</b><br> nach Partei",
     },
     "topics": {
         "label": "label",
         "value": "match_nr",
         "color_col": "match_nr",
-        "colorscale": "blues",
+        "colorscale": "blugrn",
         "meta_template": "{search_phrase}",
         "hovertemplate": "<extra></extra>%{meta} wird %{x} mal im Kontext von %{y} erwähnt.",
-        "chart_title": "Top 10 Themen, in deren Kontext <b>{search_phrase}</b><br>von <b>{selected_party}</b> erwähnt wird",
+        "chart_title": "Top 10 Themen, in deren Kontext<br><b>{search_phrase}</b><br>von <b>{selected_party}</b> erwähnt wird",
     },
     "entities": {
         "label": "label",
         "value": "match_nr",
         "color_col": "match_nr",
-        "colorscale": "blues",
+        "colorscale": "blugrn",
         "meta_template": "{search_phrase}",
         "hovertemplate": "<extra></extra>%{meta} wird %{x} mal im Kontext von %{y} erwähnt.",
-        "chart_title": "Top 10 Konzepte, in deren Kontext <b>{search_phrase}</b><br>von <b>{selected_party}</b> erwähnt wird",
+        "chart_title": "Top 10 Konzepte, in deren Kontext<br><b>{search_phrase}</b><br>von <b>{selected_party}</b> erwähnt wird",
     },
 }
 
@@ -73,9 +73,6 @@ entities_df = pd.DataFrame(
         "entity_result_id",
         "label",
         "type",
-        "freebase_types",
         "score",
-        "relevanceScore",
-        "wikiLink",
     ]
 )

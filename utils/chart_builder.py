@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+from PIL import Image
 
 
 def create_horizontal_barchart(chart_data, chart_specs, **kwargs):

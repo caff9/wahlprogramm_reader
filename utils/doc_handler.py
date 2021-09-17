@@ -3,6 +3,7 @@ import fitz
 import tempfile
 import textrazor
 import pandas as pd
+import json
 
 
 def read_docs_from_links(doc_dict):
@@ -31,6 +32,28 @@ def read_docs_from_links(doc_dict):
                 asset_dict[line_number] = line_text
             return_dict[asset_name] = asset_dict
     return return_dict
+
+
+def store_docs_as_json(docs):
+    with open("doc_data.json", "w", encoding="utf8") as json_dump:
+        json.dump(assets, json_dump, sort_keys=True, indent=4, ensure_ascii=False)
+
+
+def read_docs_from_json():
+    """
+    Reads docs from json file. For performance purposes only.
+
+    Returns
+    -------
+    dict
+        A dict with doc_name as key. Contains a nested dict of structure
+        line_number: line_text.
+    """
+    asset_dict = json.load(open("doc_data.json"))
+    asset_dict = {
+        k: {int(kk): vv for kk, vv in v.items()} for k, v in asset_dict.items()
+    }
+    return asset_dict
 
 
 def search_against_docs(asset_dict, search_phrase):
@@ -71,10 +94,7 @@ def request_textrazor_data(match_nr, text_to_analyze, api_key):
             "entity_result_id",
             "label",
             "type",
-            "freebase_types",
-            "confidenceScore",
-            "relevanceScore",
-            "wikiLink",
+            "score",
         ]
     )
 
@@ -101,28 +121,20 @@ def request_textrazor_data(match_nr, text_to_analyze, api_key):
                 entity_data = entity.json
                 # catch missing values
                 try:
-                    entity_type = entity_data["type"]
+                    entity_type = str(entity_data["type"])
                 except KeyError:
-                    entity_type = ["type unknown"]
-                try:
-                    freebase_types = entity_data["freebaseTypes"]
-                except KeyError:
-                    freebase_types = ["freebase types unknown"]
+                    entity_type = "type unknown"
+                # build df
                 entity_df = entity_df.append(
                     {
                         "match_nr": match_nr,
                         "entity_result_id": entity_n,
                         "label": entity_data["entityId"],
                         "type": entity_type,
-                        "freebase_types": freebase_types,
                         "score": entity_data["confidenceScore"],
-                        "relevanceScore": float(entity_data["relevanceScore"]),
-                        "wikiLink": entity_data["wikiLink"],
                     },
                     ignore_index=True,
                 )
             # filter irrelevant entity types
-            entity_df = entity_df[
-                ~entity_df["type"].str.contains("""["Number"]""", na=False)
-            ]
+            entity_df = entity_df[entity_df["type"] != "['Number']"]
     return topic_df, entity_df
