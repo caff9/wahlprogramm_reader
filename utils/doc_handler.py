@@ -49,7 +49,7 @@ def read_docs_from_json():
         A dict with doc_name as key. Contains a nested dict of structure
         line_number: line_text.
     """
-    asset_dict = json.load(open("doc_data.json"))
+    asset_dict = json.load(open("assets/doc_data.json"))
     asset_dict = {
         k: {int(kk): vv for kk, vv in v.items()} for k, v in asset_dict.items()
     }

@@ -45,7 +45,7 @@ if "selected_entity" not in st.session_state:
 # ###############################
 # APP STRUCTURE
 # ###############################
-st.image(Image.open("header.png"))
+st.image(Image.open("assets/header.png"))
 f"""
     ## Jetzt noch alle Wahlprogramme im Detail lesen?
     ## Irgendwie unrealistisch, oder?
@@ -108,8 +108,8 @@ entity_match_placeholder = st.empty()
 st.markdown(
     f"""
         ---
-        Check out the repository for this app: <a href="https://github.com/caff9/wahlprogramm_reader" target="_blank"><img src="data:image/gif;base64,{base64.b64encode(open("GitHub-Mark-32px.png", "rb").read()).decode("utf-8")}" height="32" alt="GitHub"></a> \n
-        Write me on LinkedIn: <a href="https://www.linkedin.com/in/erik-klemusch/" target="_blank"><img src="data:image/gif;base64,{base64.b64encode(open("LI-In-Bug.png", "rb").read()).decode("utf-8")}" height="32" alt="LinkedIn"></a>
+        Check out the repository for this app: <a href="https://github.com/caff9/wahlprogramm_reader" target="_blank"><img src="data:image/gif;base64,{base64.b64encode(open("assets/GitHub-Mark-32px.png", "rb").read()).decode("utf-8")}" height="32" alt="GitHub"></a> \n
+        Write me on LinkedIn: <a href="https://www.linkedin.com/in/erik-klemusch/" target="_blank"><img src="data:image/gif;base64,{base64.b64encode(open("assets/LI-In-Bug.png", "rb").read()).decode("utf-8")}" height="32" alt="LinkedIn"></a>
     """,
     unsafe_allow_html=True,
 )
