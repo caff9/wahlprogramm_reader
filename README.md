@@ -19,3 +19,6 @@ This Streamlit app allows for executing concurrent searches against several elec
 ![Topics across matches for selected party](assets/party_search_phrase_topics.png)
 - The feature to display either all matches for the selected party or just those matches relevant for a selected topic or entity allow for users of the app to dive deeper into the electoral programs and to come to their own understanding, without any bias inherent in summaries obtained from media outlets.
 ![Match details](assets/match_details.png)
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/caff9/wahlprogramm_reader/main/main.py)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
