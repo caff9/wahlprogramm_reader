@@ -18,7 +18,7 @@ from utils.chart_builder import create_horizontal_barchart
 # #############################################
 # SETTINGS
 # #############################################
-textrazor_key = config("TEXTRAZOR")
+textrazor_key = st.secrets["TEXTRAZOR"]
 
 # hide menu and fullscreen icon
 st.markdown(
